@@ -16,11 +16,13 @@ class DNSProxy(DNSServer):
         self.buffer = DNSBuffer()
 
     def get_server(self, question):
-        name = question[0].name.to_text(omit_final_dot=True)
+        name = question[0].name.to_text(
+            omit_final_dot=True) if question else ""
         for pattern in reversed(self.servers):
             if re.search(pattern, name):
                 index = self.indexes[pattern]
-                self.indexes[pattern] = (index + 1) % len(self.servers[pattern])
+                self.indexes[pattern] = (
+                    index + 1) % len(self.servers[pattern])
                 return self.servers[pattern][index]
 
     def handle(self, data, address):
@@ -33,17 +35,27 @@ class DNSProxy(DNSServer):
             response_msg.answer = self.buffer[str(query_msg.question[0].name)]
             self.socket.sendto(response_msg.to_wire(), address)
             return
-        while 1:
+        client = DNSClient()
+        for _ in range(2):
             server = self.get_server(query_msg.question)
-            print(server)
-            client = DNSClient(server)
+            client.set_address(server)
             response_msg = client.query(query_msg)
-            if response_msg:
-                self.buffer[str(query_msg.question[0].name)] = response_msg.answer
+            if response_msg and response_msg.answer:
+                print("hit query")
+                self.buffer[str(query_msg.question[0]
+                                .name)] = response_msg.answer
                 self.socket.sendto(response_msg.to_wire(), address)
                 return
+        server = self.get_server("")
+        client.set_address(server)
+        response_msg = client.query(query_msg)
+        if response_msg and response_msg.answer:
+            print("hit default query")
+            self.buffer[str(query_msg.question[0].name)] = response_msg.answer
+            self.socket.sendto(response_msg.to_wire(), address)
 
 
 if __name__ == "__main__":
-    from gevent import monkey; monkey.patch_all()
-    DNSProxy(("127.0.0.1", 53), config).serve_forever()
+    from gevent import monkey
+    monkey.patch_all()
+    DNSProxy(("0.0.0.0", 53), config).serve_forever()

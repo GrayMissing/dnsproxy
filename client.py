@@ -25,6 +25,6 @@ class DNSClient(object):
         for a in message.answer:
             for rdata in a:
                 address = rdata.to_text()
-                if subprocess.call(["ping", "-c 1", address]) != 0:
+                if subprocess.call(["ping", "-c 1", address], shell=True) != 0:
                     return False
         return True

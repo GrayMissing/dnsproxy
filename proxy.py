@@ -14,6 +14,7 @@ class DNSProxy(DNSServer):
         self.servers = config.servers
         self.indexes = dict((key, 0) for key in self.servers)
         self.buffer = DNSBuffer()
+        self.stats = {"total": 0, "success": 0}
 
     def get_server(self, question):
         name = question[0].name.to_text(
@@ -26,15 +27,17 @@ class DNSProxy(DNSServer):
                 return self.servers[pattern][index]
 
     def handle(self, data, address):
+        print("成功解析{}次, 共解析{}次".format(self.stats["success"], self.stats[
+            "total"]))
+        self.stats["total"] += 1
         query_msg = from_wire(data)
-        print(query_msg.question[0].name.to_text(omit_final_dot=True))
         assert len(query_msg.question) == 1
         buffer = self.buffer.get(str(query_msg.question[0].name))
         if buffer:
-            print("hit buffer")
             response_msg = make_response(query_msg)
             response_msg.answer = buffer
             self.socket.sendto(response_msg.to_wire(), address)
+            self.stats["success"] += 1
             return
         client = DNSClient()
         for _ in range(2):
@@ -42,18 +45,18 @@ class DNSProxy(DNSServer):
             client.set_address(server)
             response_msg = client.query(query_msg)
             if response_msg and response_msg.answer:
-                print("hit query")
                 self.buffer[str(query_msg.question[0]
                                 .name)] = response_msg.answer
                 self.socket.sendto(response_msg.to_wire(), address)
+                self.stats["success"] += 1
                 return
         server = self.get_server("")
         client.set_address(server)
         response_msg = client.query(query_msg)
         if response_msg and response_msg.answer:
-            print("hit default query")
             self.buffer[str(query_msg.question[0].name)] = response_msg.answer
             self.socket.sendto(response_msg.to_wire(), address)
+            self.stats["success"] += 1
 
 
 if __name__ == "__main__":

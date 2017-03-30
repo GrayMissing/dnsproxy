@@ -3,7 +3,7 @@ import time
 
 
 class DNSBuffer(dict):
-    def __init__(self, timeout=300):
+    def __init__(self, timeout=3600):
         self.timeouts = {}
         self.timeout = timeout
 

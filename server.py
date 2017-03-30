@@ -12,5 +12,3 @@ class DNSServer(DatagramServer):
         client = DNSClient('192.168.6.2')
         response_msg = client.query(query_msg)
         self.socket.sendto(response_msg.to_wire(), address)
-
-

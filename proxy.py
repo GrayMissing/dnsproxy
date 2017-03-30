@@ -27,12 +27,13 @@ class DNSProxy(DNSServer):
 
     def handle(self, data, address):
         query_msg = from_wire(data)
-        print(query_msg.question)
+        print(query_msg.question[0].name.to_text(omit_final_dot=True))
         assert len(query_msg.question) == 1
-        if str(query_msg.question[0].name) in self.buffer:
+        buffer = self.buffer.get(str(query_msg.question[0].name))
+        if buffer:
             print("hit buffer")
             response_msg = make_response(query_msg)
-            response_msg.answer = self.buffer[str(query_msg.question[0].name)]
+            response_msg.answer = buffer
             self.socket.sendto(response_msg.to_wire(), address)
             return
         client = DNSClient()

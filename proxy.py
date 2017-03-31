@@ -57,6 +57,7 @@ class DNSProxy(DNSServer):
             self.buffer[str(query_msg.question[0].name)] = response_msg.answer
             self.socket.sendto(response_msg.to_wire(), address)
             self.stats["success"] += 1
+        print("{}解析错误".format(str(query_msg.question[0].name)))
 
 
 if __name__ == "__main__":
